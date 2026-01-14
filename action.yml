@@ -1,0 +1,55 @@
+name: "Slack Deploy Action"
+description: "Send deploy notifications to Slack using attachment-style layout"
+author: "forecho"
+branding:
+  icon: "bell"
+  color: "green"
+inputs:
+  slack_bot_token:
+    description: "Slack Bot Token"
+    required: true
+  slack_channel_id:
+    description: "Slack channel ID"
+    required: true
+  language:
+    description: "Language for labels: en or zh"
+    required: false
+    default: "en"
+  service_name:
+    description: "Label used in the Actions URL field"
+    required: false
+    default: "Deploy"
+  color:
+    description: "Attachment color"
+    required: false
+    default: "#2eb886"
+  footer_text:
+    description: "Footer text override"
+    required: false
+    default: ""
+  footer_icon:
+    description: "Footer icon URL"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Generate Slack payload
+      shell: bash
+      env:
+        SLACK_DEPLOY_LANGUAGE: ${{ inputs.language }}
+        SLACK_DEPLOY_SERVICE_NAME: ${{ inputs.service_name }}
+        SLACK_DEPLOY_COLOR: ${{ inputs.color }}
+        SLACK_DEPLOY_FOOTER_TEXT: ${{ inputs.footer_text }}
+        SLACK_DEPLOY_FOOTER_ICON: ${{ inputs.footer_icon }}
+        SLACK_DEPLOY_CHANNEL_ID: ${{ inputs.slack_channel_id }}
+        SLACK_DEPLOY_OUTPUT: ${{ runner.temp }}/slack-payload.json
+      run: python3 ${{ github.action_path }}/scripts/generate_payload.py
+
+    - name: Send Slack notification
+      uses: slackapi/slack-github-action@v2
+      with:
+        token: ${{ inputs.slack_bot_token }}
+        method: chat.postMessage
+        payload-file-path: ${{ runner.temp }}/slack-payload.json
